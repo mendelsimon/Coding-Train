@@ -98,4 +98,3 @@ class Turtle {
         this.y = parseInt(new_y);
     }
 }
-
