@@ -20,7 +20,7 @@ const commands_args = {
 };
 
 function lex(codeString) {
-    return codeString.split(/[^\w\[\]]+|\b/); // TODO: better lexing
+    return codeString.replace(/\]/g, ' ]').split(/[^\w\[\]]+|\b/); // TODO: better lexing
 }
 
 function parse() {
