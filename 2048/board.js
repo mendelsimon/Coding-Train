@@ -213,28 +213,6 @@ class Board {
         let y2 = row_2 * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
         return [value, x1, x2, y1, y2];
     }
-
-    shiftRow(row) {
-        let size = row.length;
-        row = row.filter(x => x !== 0);
-        while (row.length < size) {
-            row.push(0);
-        }
-        return row;
-    }
-    
-    combineRow(row) {
-        row = this.shiftRow(row);
-        for (let i = 0; i < row.length - 1; i++) {
-            if (row[i] !== 0 && row[i] === row[i + 1]) {
-                row[i] = row[i] * 2;
-                row[i + 1] = 0;
-                i++;
-            }
-        }
-        row = this.shiftRow(row);
-        return row;
-    }
     
     transposeBoard() {
         let newBoard = [];
