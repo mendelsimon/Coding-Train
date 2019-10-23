@@ -27,19 +27,15 @@ function keyPressed() {
     other_keys = [
         'R'.charCodeAt(0),
     ];
-    oldBoard = board.copyBoard();
     if (keyCode === LEFT_ARROW) {
-        board.left();
+        board.move(board.DIRECTIONS.LEFT);
     } else if (keyCode === RIGHT_ARROW) {
-        board.right();
+        board.move(board.DIRECTIONS.RIGHT);
     } else if (keyCode === UP_ARROW) {
-        board.up();
+        board.move(board.DIRECTIONS.UP);
     } else if (keyCode === DOWN_ARROW) {
-        board.down();
+        board.move(board.DIRECTIONS.DOWN);
     } else if (keyCode === 'R'.charCodeAt(0)) {
         board.reset();
-    }
-    if (move_keys.includes(keyCode) && !board.boardEquals(oldBoard)) {
-        board.spawn();
     }
 }

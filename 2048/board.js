@@ -1,4 +1,5 @@
 class Board {
+    DIRECTIONS = {LEFT: 0, RIGHT: 1, UP: 2, DOWN: 3}
     tile_colors = {
         0: ['#f9f6f2', '#f9f6f2'],
         2: ['#776e65', '#eee4da'],
@@ -16,24 +17,34 @@ class Board {
 
     other_colors = {
         bg: '#000',
-        tile_bg: '#fff',
+        tile_bg: '#f9f6f2',
+        high_value: ['#fff', '#000'],
     }
 
     constructor(boardSize, padding = 8) {
         this.BOARD_SIZE = boardSize;
         this.PADDING = padding;
         this.SQAURE_SIZE = (width - padding * (boardSize + 1)) / boardSize;
+        this.ANIMATION_FRAMES = 5;
+        this.animation_frames_left = 0;
+        this.animation = [];
+        this.oldBoard = [];
         this.reset();
+    }
+
+    createArray(size, fill=undefined) {
+        let arr = [];
+        for (let _ = 0; _ < size; _++) {
+            arr.push(fill);
+        }
+        return arr;
     }
 
     reset() {
         this.board = [];
         for (let _ = 0; _ < this.BOARD_SIZE; _++) {
             let row = []
-            for (let __ = 0; __ < this.BOARD_SIZE; __++) {
-                row.push(0);
-            }
-            this.board.push(row);
+            this.board.push(this.createArray(this.BOARD_SIZE, 0));
         }
     
         this.spawn();
@@ -42,48 +53,167 @@ class Board {
     
     draw() {
         background(this.other_colors['bg']);
-        for (let row = 0; row < this.BOARD_SIZE; row++) {
-            for (let col = 0; col < this.BOARD_SIZE; col++) {
-                let value = this.board[row][col];
-                let colors = this.tile_colors[value] || ['#fff', '#000'];
+        if (this.animation_frames_left === 0) {
+            for (let row = 0; row < this.BOARD_SIZE; row++) {
+                for (let col = 0; col < this.BOARD_SIZE; col++) {
+                    let value = this.board[row][col];
+                    let colors = this.tile_colors[value] || this.other_colors['high_value'];
+                    fill(colors[1]);
+                    let x = col * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+                    let y = row * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+                    
+                    rect(x, y, this.SQAURE_SIZE, this.SQAURE_SIZE, 10);
+                    fill(colors[0]);
+                    if (value !== 0) {
+                        text(value, x + this.SQAURE_SIZE / 2, y + this.SQAURE_SIZE / 2);
+                    }
+                }
+            }
+        } else {
+            // Draw the background
+            fill(this.other_colors['tile_bg']);
+            for (let row = 0; row < this.BOARD_SIZE; row++) {
+                for (let col = 0; col < this.BOARD_SIZE; col++) {
+                    let x = col * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+                    let y = row * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+                    rect(x, y, this.SQAURE_SIZE, this.SQAURE_SIZE, 10);
+                }
+            }
+            // Draw the values
+            for (let [value, x1, x2, y1, y2] of this.animation) {
+                let colors = this.tile_colors[value] || this.other_colors['high_value'];
                 fill(colors[1]);
-                let x = col * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
-                let y = row * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
-                
+                let x = lerp(x1, x2, (this.ANIMATION_FRAMES - this.animation_frames_left) / this.ANIMATION_FRAMES);
+                let y = lerp(y1, y2, (this.ANIMATION_FRAMES - this.animation_frames_left) / this.ANIMATION_FRAMES);
                 rect(x, y, this.SQAURE_SIZE, this.SQAURE_SIZE, 10);
                 fill(colors[0]);
                 if (value !== 0) {
                     text(value, x + this.SQAURE_SIZE / 2, y + this.SQAURE_SIZE / 2);
                 }
             }
+
+            this.animation_frames_left -= 1;
         }
     }
 
     left() {
-        let oldBoard = board.copyBoard();
-        this.board = this.board.map(row => this.combineRow(row));
+        this.moveLeft(this.DIRECTIONS.LEFT);
     }
 
     right() {
         this.reverseBoard();
-        this.left()
+        this.moveLeft(this.DIRECTIONS.RIGHT);
         this.reverseBoard();
     }
 
     up() {
         this.transposeBoard();
-        this.left();
+        this.moveLeft(this.DIRECTIONS.UP);
         this.transposeBoard();
     }
 
     down() {
         this.transposeBoard();
         this.reverseBoard();
-        this.left();
+        this.moveLeft(this.DIRECTIONS.DOWN);
         this.reverseBoard();
         this.transposeBoard();
     }
+
+    move(dir) {
+        this.oldBoard = board.copyBoard();
+        switch (dir) {
+            case this.DIRECTIONS.LEFT:
+                this.left()
+                break;
+            case this.DIRECTIONS.RIGHT:
+                this.right();
+                break;
+            case this.DIRECTIONS.UP:
+                this.up();
+                break;
+            case this.DIRECTIONS.DOWN:
+                this.down();
+                break;
+        }
+        if (this.boardChanged()) {
+            this.animation_frames_left = this.ANIMATION_FRAMES;
+            this.spawn();
+        }
+    }
+
+    moveLeft(actualDir) {
+        this.animation = [];
+        for (let rowNum = 0; rowNum < this.BOARD_SIZE; rowNum++) {
+            let row = this.board[rowNum];
+            let combined = this.createArray(this.BOARD_SIZE, false);
+            for (let col = 0; col < this.BOARD_SIZE; col++) {
+                if (row[col] === 0) {
+                    continue;
+                }
+
+                let value = row[col];
+                row[col] = 0;
+                // Move the cell back until it hits a non-zero or an edge
+                let newCol = col - 1;
+                while (row[newCol] === 0 && newCol > 0)  {
+                    newCol--;
+                }
+                if (col === 0) {
+                    newCol = 0;
+                    row[newCol] = value;
+                } else if (row[newCol] === 0) {
+                    row[newCol] = value;
+                } else if (row[newCol] === value && !combined[newCol]) {
+                    row[newCol] = value * 2;
+                    combined[newCol] = true;
+                } else {
+                    newCol++;
+                    row[newCol] = value;
+                }
+                this.animation.push(this.calculateAnimation(value, rowNum, col, newCol, actualDir));
+            }
+        }
+    }
     
+    calculateAnimation(value, row, oldCol, newCol, dir) {
+        let col_1;
+        let col_2;
+        let row_1;
+        let row_2;
+        switch (dir) {
+            case this.DIRECTIONS.LEFT:
+                col_1 = oldCol;
+                col_2 = newCol;
+                row_1 = row;
+                row_2 = row;
+                break;
+            case this.DIRECTIONS.RIGHT:
+                col_1 = this.BOARD_SIZE - oldCol - 1;
+                col_2 = this.BOARD_SIZE - newCol - 1;
+                row_1 = row;
+                row_2 = row;
+                break;
+            case this.DIRECTIONS.UP:
+                col_1 = row;
+                col_2 = row;
+                row_1 = oldCol;
+                row_2 = newCol;
+                break;
+            case this.DIRECTIONS.DOWN:
+                col_1 = row;
+                col_2 = row;
+                row_1 = this.BOARD_SIZE - oldCol - 1;
+                row_2 = this.BOARD_SIZE - newCol - 1;
+                break;
+        }
+        let x1 = col_1 * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+        let x2 = col_2 * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+        let y1 = row_1 * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+        let y2 = row_2 * (this.SQAURE_SIZE + this.PADDING) + this.PADDING;
+        return [value, x1, x2, y1, y2];
+    }
+
     shiftRow(row) {
         let size = row.length;
         row = row.filter(x => x !== 0);
@@ -156,15 +286,15 @@ class Board {
         return newBoard;
     }
     
-    boardEquals(oldBoard) {
-        for (let row = 0; row < oldBoard.length; row++) {
-            for (let col = 0; col < oldBoard.length; col++) {
-                if (oldBoard[row][col] !== this.board[row][col]){
-                    return false;
+    boardChanged() {
+        for (let row = 0; row < this.oldBoard.length; row++) {
+            for (let col = 0; col < this.oldBoard.length; col++) {
+                if (this.oldBoard[row][col] !== this.board[row][col]){
+                    return true;
                 }
             }
         }
-        return true;
+        return false;
     }
 
     isGameOver() {
