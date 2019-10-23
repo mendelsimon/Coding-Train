@@ -4,7 +4,6 @@ let board;
 function setup() {
     let boardSize = 4;
     let padding = 8;
-    console.log(boardSize * 100 + boardSize * padding);
     
     let canvasSize = boardSize * 100 + boardSize * padding;
     createCanvas(canvasSize, canvasSize);
